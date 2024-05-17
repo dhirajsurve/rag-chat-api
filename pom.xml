@@ -26,25 +26,38 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<!-- Spring Boot Starter Data JPA -->
 		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-pgvector-store-spring-boot-starter</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
-		<!--		<dependency>
+		<!-- PostgreSQL JDBC Driver -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.2.18</version>
+		</dependency>
+		<dependency>
+			<groupId>com.pgvector</groupId>
+			<artifactId>pgvector</artifactId>
+			<version>0.1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+		</dependency>
+
+		 		<dependency>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-docker-compose</artifactId>
                     <scope>runtime</scope>
                     <optional>true</optional>
-                </dependency>-->
+                </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

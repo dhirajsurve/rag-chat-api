@@ -1,28 +1,28 @@
 package com.rag.chat.api.rag.chat.api.processor;
 
+import com.rag.chat.api.rag.chat.api.service.EmbeddingService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PdfFileReader {
-    private final VectorStore vectorStore;
-
     @Value("classpath:RFP.pdf")
     private Resource pdfResource;
 
-    public PdfFileReader(VectorStore vectorStore) {
-        this.vectorStore = vectorStore;
+    private final EmbeddingService embeddingService;
+    public PdfFileReader(  EmbeddingService embeddingService) {
+
+        this.embeddingService = embeddingService;
     }
 
-    //@PostConstruct
-    public void init() {
+    @PostConstruct
+    public void pdfEmbedding() {
 
         var config = PdfDocumentReaderConfig.builder()
                 .withPageExtractedTextFormatter(
@@ -32,7 +32,11 @@ public class PdfFileReader {
 
         var pdfReader = new PagePdfDocumentReader(pdfResource, config);
         var textSplitter = new TokenTextSplitter();
-        vectorStore.accept(textSplitter.apply(pdfReader.get()));
+        textSplitter.apply(pdfReader.get()).forEach(document -> {
+
+            embeddingService.embed(document);
+
+        });
 
     }
 }
