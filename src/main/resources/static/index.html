@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #1e88e5;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="file"], button {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        input[type="submit"], button {
+            background-color: #009688;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover, button:hover {
+            background-color: #00796b;
+        }
+
+        .chat-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin-bottom: 20px;
+        }
+
+        .question {
+            background-color: #e0f2f1;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .answer {
+            background-color: #dcedc8;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .info-message {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Chat App</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="file">
+        <button type="submit">Upload</button>
+        <p id="uploadMessage"></p>
+    </form>
+
+    <form id="chatForm">
+        <input type="text" name="question" id="question" placeholder="Type your question here...">
+        <button type="submit">Submit</button>
+    </form>
+
+    <div class="chat-container" id="chatHistory"></div>
+    <div class="info-message" id="statusMessage">Waiting...</div>
+</div>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var formData = new FormData();
+        formData.append('file', document.getElementById('file').files[0]);
+
+        fetch('http://127.0.0.1:8080/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('uploadMessage').innerText = 'File uploaded successfully.';
+                } else {
+                    document.getElementById('uploadMessage').innerText = 'File upload failed.';
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('uploadMessage').innerText = 'File upload failed.';
+            });
+    });
+
+    document.getElementById('chatForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var question = document.getElementById('question').value;
+
+        var chatHistory = document.getElementById('chatHistory');
+        var message = document.createElement('div');
+        message.classList.add('message');
+
+        var questionDiv = document.createElement('div');
+        questionDiv.classList.add('question');
+        questionDiv.innerText = 'Question: ' + question;
+
+        message.appendChild(questionDiv);
+
+        chatHistory.insertBefore(message, chatHistory.firstChild);
+
+        document.getElementById('statusMessage').style.display = 'block';
+        document.getElementById('statusMessage').innerText = 'Sending...';
+
+        fetch('http://127.0.0.1:8080/api/prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt: question })
+        })
+            .then(response => response.text())
+            .then(data => {
+                var answerDiv = document.createElement('div');
+                answerDiv.classList.add('answer');
+                answerDiv.innerText = 'Answer: ' + data;
+
+                message.appendChild(answerDiv);
+
+                document.getElementById('question').value = '';
+                document.getElementById('statusMessage').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('statusMessage').innerText = 'Error occurred';
+            });
+    });
+</script>
+</body>
+</html>
