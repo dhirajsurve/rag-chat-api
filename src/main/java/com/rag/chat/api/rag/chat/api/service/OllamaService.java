@@ -7,6 +7,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingClient;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,19 +26,20 @@ public class OllamaService {
 
     private final WebClient.Builder webClientBuilder;
     private final VectorStore vectorStore;
+    private final SearchService searchService;
 
 
-    public OllamaService(WebClient.Builder webClientBuilder, EmbeddingClient embeddingClient) {
+    public OllamaService(WebClient.Builder webClientBuilder, EmbeddingClient embeddingClient, SearchService searchService) {
         this.webClientBuilder = webClientBuilder;
          this.vectorStore = new SimpleVectorStore(embeddingClient);
+        this.searchService = searchService;
     }
 
 
     public Mono<String> generateResponse(String model, String query) {
         // Prepare the request payload
         WebClient webClient = webClientBuilder.baseUrl(ollamaApiUrl).build();
-
-        List<Document> similarDocuments = vectorStore.similaritySearch(query);
+        List<Document> similarDocuments = searchService.similaritySearch(SearchRequest.query(query));
         String information = similarDocuments.stream()
                 .map(Document::getContent)
                 .collect(Collectors.joining(System.lineSeparator()));

@@ -79,7 +79,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
-
+		<dependency>
+			<groupId>androidx.compose.runtime</groupId>
+			<artifactId>runtime-rxjava3</artifactId>
+			<version>1.7.0-alpha03</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
