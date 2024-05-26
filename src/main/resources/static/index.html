@@ -116,15 +116,13 @@
             method: 'POST',
             body: formData
         })
-            .then(response => {
-                if (response.ok) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.fileName) {
                     document.getElementById('uploadMessage').innerText = 'File uploaded successfully.';
                 } else {
                     document.getElementById('uploadMessage').innerText = 'File upload failed.';
                 }
-                return response.json();
-            })
-            .then(data => {
                 console.log(data);
             })
             .catch(error => {
@@ -159,11 +157,11 @@
             },
             body: JSON.stringify({ prompt: question })
         })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
                 var answerDiv = document.createElement('div');
                 answerDiv.classList.add('answer');
-                answerDiv.innerText = 'Answer: ' + data;
+                answerDiv.innerText = 'Answer: ' + data.response;
 
                 message.appendChild(answerDiv);
 

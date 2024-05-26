@@ -1,7 +1,7 @@
 package com.rag.chat.api.rag.chat.api.controller;
 
 import com.rag.chat.api.rag.chat.api.processor.PdfFileReader;
-import com.rag.chat.api.rag.chat.api.service.OllamaService;
+import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -18,18 +18,18 @@ public class OllamaChatController {
     private String model;
 
 
-    private final OllamaService ollamaService;
+    private final TogetherAiService togetherAiService;
     @Autowired
     public OllamaChatController(PdfFileReader pdfFileReader,
-                                OllamaService ollamaService) {
+                                TogetherAiService togetherAiService) {
          this.pdfFileReader = pdfFileReader;
-        this.ollamaService = ollamaService;
+        this.togetherAiService = togetherAiService;
     }
 
     @PostMapping(value = "/api/prompt", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> generateResponse(@RequestBody String prompt) {
         System.out.println("Prompt:" + prompt);
-        String response = ollamaService.generateResponse(model, prompt).block(); // Blocking call to get the response
+        String response = togetherAiService.generateResponse(model, prompt).block(); // Blocking call to get the response
 
         System.out.println("Response:" + response);
 
@@ -42,6 +42,8 @@ public class OllamaChatController {
     @PostMapping("/api/upload")
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
         String fileName = file.getResource().getFilename();
+
+        System.out.println(togetherAiService.embedd("what your name"));
 
         pdfFileReader.pdfEmbedding(file);
 

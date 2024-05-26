@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS vector_store (
     embedding vector(1536) // 1536 is the default embedding dimension
     );
 
-CREATE INDEX ON vector_store USING HNSW (embedding vector_cosine_ops);
+CREATE INDEX ON vector_store1 USING HNSW (embedding vector_cosine_ops);

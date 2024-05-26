@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -58,12 +59,22 @@ public class SearchService {
         String jsonPathFilter = " AND metadata::jsonb @@ '" + "nativeFilterExpression" + "'::jsonpath ";
 
 
-        double distance = 1.0 - request.getSimilarityThreshold();
-        List<Double>  queryEmbedding = embeddingClient.embed(request.getQuery());
+            double distance = 1.0 - request.getSimilarityThreshold();
+        PGvector  queryEmbedding = new PGvector(this.toFloatArray(embeddingClient.embed(request.getQuery())));
         return this.jdbcTemplate.query( "SELECT *, embedding <-> ? AS distance FROM vector_store WHERE embedding <-> ? < ?   ORDER BY distance LIMIT ? ",
                 new DocumentRowMapper(this.objectMapper), queryEmbedding, queryEmbedding, distance, request.getTopK());
     }
+    private float[] toFloatArray(List<Double> embeddingDouble) {
+        float[] embeddingFloat = new float[embeddingDouble.size()];
+        int i = 0;
 
+        Double d;
+        for(Iterator var4 = embeddingDouble.iterator(); var4.hasNext(); embeddingFloat[i++] = d.floatValue()) {
+            d = (Double)var4.next();
+        }
+
+        return embeddingFloat;
+    }
     private static class DocumentRowMapper implements RowMapper<Document> {
         private static final String COLUMN_EMBEDDING = "embedding";
         private static final String COLUMN_METADATA = "metadata";
