@@ -112,18 +112,19 @@
         var formData = new FormData();
         formData.append('file', document.getElementById('file').files[0]);
 
-        fetch('http://127.0.0.1:8080/api/upload', {
+        fetch('http://127.0.0.1:5000/upload_pdf', {
             method: 'POST',
             body: formData
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.fileName) {
-                    document.getElementById('uploadMessage').innerText = 'File uploaded successfully.';
+            .then(response => {
+                if (response.status === 200) {
+                    return response.text();
                 } else {
-                    document.getElementById('uploadMessage').innerText = 'File upload failed.';
+                    throw new Error('Non-200 response');
                 }
-                console.log(data);
+            })
+            .then(data => {
+                document.getElementById('uploadMessage').innerText = 'File uploaded successfully!';
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -150,7 +151,7 @@
         document.getElementById('statusMessage').style.display = 'block';
         document.getElementById('statusMessage').innerText = 'Sending...';
 
-        fetch('http://127.0.0.1:8080/api/prompt', {
+        fetch('http://127.0.0.1:8081/api/prompt', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

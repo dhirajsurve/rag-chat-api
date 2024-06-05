@@ -1,12 +1,13 @@
 package com.rag.chat.api.rag.chat.api.entity;
 
+import com.pgvector.PGvector;
 import com.rag.chat.api.rag.chat.api.utils.DoubleArrayConverter;
 
 import jakarta.persistence.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "vector_store")
+@Table(name = "vector_store1")
 public class EmbeddingVectorStore {
 
     @Id
@@ -21,8 +22,8 @@ public class EmbeddingVectorStore {
     private String metadata;
 
     @Convert(converter = DoubleArrayConverter.class)
-    @Column(columnDefinition = "text")
-    private double[] embedding;
+    @Column(name = "embedding")
+    private float[] embedding;
 
     // Getters and Setters
 
@@ -50,11 +51,11 @@ public class EmbeddingVectorStore {
         this.metadata = metadata;
     }
 
-    public double[] getEmbedding() {
+    public float[]   getEmbedding() {
         return embedding;
     }
 
-    public void setEmbedding(double[] embedding) {
+    public void setEmbedding(float[]  embedding) {
         this.embedding = embedding;
     }
 }

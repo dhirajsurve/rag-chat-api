@@ -1,6 +1,7 @@
 package com.rag.chat.api.rag.chat.api.processor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import com.rag.chat.api.rag.chat.api.service.VectorStoreService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.embedding.EmbeddingClient;
@@ -8,6 +9,7 @@ import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -26,28 +28,30 @@ public class PdfFileReader {
 //    private Resource pdfResource;
     private final VectorStoreService vectorStoreService;
 
-    private final EmbeddingClient embeddingClient;
-    public PdfFileReader(VectorStoreService vectorStoreService, EmbeddingClient embeddingClient) {
+    private final TogetherAiService togetherAiService;
+    public PdfFileReader(VectorStoreService vectorStoreService, TogetherAiService togetherAiService) {
         this.vectorStoreService = vectorStoreService;
-        this.embeddingClient = embeddingClient;
+        this.togetherAiService = togetherAiService;
     }
 
-    @Async
+   // @Async
     public void pdfEmbedding(MultipartFile file) {
-        var config = PdfDocumentReaderConfig.builder()
+         var config = PdfDocumentReaderConfig.builder()
                 .withPageExtractedTextFormatter(new ExtractedTextFormatter.Builder().build())
                 .build();
 
             var pdfReader = new PagePdfDocumentReader(file.getResource(), config);
             var textSplitter = new TokenTextSplitter();
             Gson gson = new Gson();
+           // vectorStoreService.add(textSplitter.apply(pdfReader.get()));
             textSplitter.apply(pdfReader.get()).forEach(document -> {
                 vectorStoreService.createVectorStore(
                         document.getContent(),
                         gson.toJson(document.getMetadata()),
-                        convertListToArray(embeddingClient.embed(document))
+                         togetherAiService.embedd(document.getContent())
                 );
             });
+
 
     }
 
