@@ -38,7 +38,7 @@ public class TogetherAiService {
 
     private static final String API_URL = "https://api.together.xyz/v1/chat/completions";
     private static final String API_URL_EMBD = "https://api.together.xyz/v1/embeddings";
-    private static final String BEARER_TOKEN = "c83774461332379f6541034c609efd0c017e4c0bc6ab8b9bf8904c1a40df380c";
+    private static final String BEARER_TOKEN = "";
 
     private final WebClient.Builder webClientBuilder;
     private final VectorStore vectorStore;
@@ -195,7 +195,7 @@ public class TogetherAiService {
         WebClient webClient = webClientBuilder.baseUrl(togetherAiUrl).build();
         Mono<String> stringMono= webClient.post()
                 .uri("/v1/embeddings")
-                .header("Authorization", "Bearer " + "c83774461332379f6541034c609efd0c017e4c0bc6ab8b9bf8904c1a40df380c")
+                .header("Authorization", "Bearer " + "")
                 .header("accept", "application/json")
                 .header("content-type", "application/json")
                 .bodyValue("{\"model\": \"togethercomputer/m2-bert-80M-8k-retrieval\", \"input\": \"" + question + "\"}")
