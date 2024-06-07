@@ -10,3 +10,16 @@ CREATE TABLE IF NOT EXISTS vector_store (
     );
 
 CREATE INDEX ON vector_store1 USING HNSW (embedding vector_cosine_ops);
+
+
+---------
+CREATE TABLE IF NOT EXISTS public.vector_store1
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    content text COLLATE pg_catalog."default",
+    metadata text,
+    embedding vector(768),
+    CONSTRAINT vector_store1_pkey PRIMARY KEY (id)
+    )
+
+    TABLESPACE pg_default;

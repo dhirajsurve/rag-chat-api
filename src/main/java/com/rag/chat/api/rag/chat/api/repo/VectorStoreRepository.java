@@ -15,4 +15,9 @@ public interface VectorStoreRepository extends JpaRepository<EmbeddingVectorStor
             "FROM vector_store1 WHERE (1 + (embedding <#> :param1)) < 1.0 ORDER BY distance LIMIT 4"
             , nativeQuery = true)
     List<Object[]> findTop4ByVector(@Param("param1") PGvector vector);
+
+    @Query(value = " SELECT distinct metadata FROM vector_store1"
+            , nativeQuery = true)
+    List<String> getFileNames();
+
 }

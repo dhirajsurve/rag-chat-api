@@ -4,6 +4,8 @@ import com.pgvector.PGvector;
 import com.rag.chat.api.rag.chat.api.utils.DoubleArrayConverter;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Type;
+
 import java.util.UUID;
 
 @Entity
@@ -18,11 +20,10 @@ public class EmbeddingVectorStore {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Column(columnDefinition = "text")
+    @Column(name = "metadata")
     private String metadata;
 
-    @Convert(converter = DoubleArrayConverter.class)
-    @Column(name = "embedding")
+    @Column(name = "embedding", columnDefinition = "vector(768)")
     private float[] embedding;
 
     // Getters and Setters

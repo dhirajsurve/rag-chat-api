@@ -4,16 +4,20 @@ import com.rag.chat.api.rag.chat.api.model.ChatRequest;
 import com.rag.chat.api.rag.chat.api.processor.PdfFileReader;
 import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import com.rag.chat.api.rag.chat.api.service.VectorStoreService;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
@@ -35,9 +39,14 @@ public class OllamaChatController {
 
     @PostMapping(value = "/api/prompt", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> generateResponse(@RequestBody ChatRequest prompt) {
-        System.out.println("Prompt:" + prompt.getPrompt());
+        System.out.println("chatrequest:" + prompt);
 
-        List<Map<String, Object>> similarDocuments=vectorStoreService.similaritySearch1(SearchRequest.query(prompt.getPrompt()));
+        if(prompt.getPrompt()==null || Objects.equals(prompt.getPrompt(), "")) {
+            System.out.println("Question cant be empty.");
+         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Question cant be empty.");
+        }
+
+        List<Map<String, Object>> similarDocuments=vectorStoreService.similaritySearch(SearchRequest.query(prompt.getPrompt()),prompt.getFileName());
 
         String information =  similarDocuments.stream()
                 .map(doc -> (String) doc.get("content"))
@@ -64,9 +73,14 @@ public class OllamaChatController {
         response.put("size", String.valueOf(file.getSize()));
 
         System.out.println("fileName:"+ fileName);
-         System.out.println("fileType:"+ file.getContentType());
         System.out.println("size:"+  file.getSize());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-}
+
+    @GetMapping("/api/userfiles")
+    public ResponseEntity<List<String>> getFileList() {
+        System.out.println("Getting list of filename.");
+     return   new ResponseEntity<>(vectorStoreService.getListofFilesName(),HttpStatus.OK);
+    }
+    }
