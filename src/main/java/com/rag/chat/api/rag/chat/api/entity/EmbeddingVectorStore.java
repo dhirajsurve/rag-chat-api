@@ -1,15 +1,11 @@
 package com.rag.chat.api.rag.chat.api.entity;
 
-import com.pgvector.PGvector;
-import com.rag.chat.api.rag.chat.api.utils.DoubleArrayConverter;
-
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
 
 import java.util.UUID;
 
 @Entity
-@Table(name = "vector_store1")
+@Table(name = "ebids.vector_store1")
 public class EmbeddingVectorStore {
 
     @Id

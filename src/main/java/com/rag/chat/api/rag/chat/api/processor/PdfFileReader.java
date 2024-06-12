@@ -1,31 +1,18 @@
 package com.rag.chat.api.rag.chat.api.processor;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import com.rag.chat.api.rag.chat.api.service.VectorStoreService;
-import jakarta.annotation.PostConstruct;
-import org.springframework.ai.embedding.EmbeddingClient;
 import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import com.google.gson.Gson;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 import static com.rag.chat.api.rag.chat.api.utils.DoubleArrayConverter.convertListToArray;
 
 @Component
-public class PdfFileReader {
-//    @Value("classpath:RFP.pdf")
-//    private Resource pdfResource;
+public class PdfFileReader { 
     private final VectorStoreService vectorStoreService;
 
     private final TogetherAiService togetherAiService;

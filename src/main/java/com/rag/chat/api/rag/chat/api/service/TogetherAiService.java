@@ -3,24 +3,15 @@ package com.rag.chat.api.rag.chat.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pgvector.PGvector;
-import com.rag.chat.api.rag.chat.api.entity.EmbeddingVectorStore;
-import com.rag.chat.api.rag.chat.api.model.ChatRequest;
 import com.rag.chat.api.rag.chat.api.model.PromptRequest;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.ai.embedding.EmbeddingClient;
-import org.springframework.ai.vectorstore.PgVectorStore;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -35,60 +26,58 @@ import java.util.Map;
 public class TogetherAiService {
     @Value("${together.ai.url}")
     private String togetherAiUrl;
+    @Value("${together.ai.token}")
+    private String BEARER_TOKEN;
 
-    private static final String API_URL = "https://api.together.xyz/v1/chat/completions";
-    private static final String API_URL_EMBD = "https://api.together.xyz/v1/embeddings";
-    private static final String BEARER_TOKEN = "";
+    @Value("${together.ai.url.completion}")
+    private String API_URL_COMPLETION;
+    @Value("${together.ai.url.emeddings}")
+    private String API_URL_EMBD;
+
 
     private final WebClient.Builder webClientBuilder;
-    private final VectorStore vectorStore;
-    private final SearchService searchService;
     private final JdbcTemplate jdbcTemplate;
-    private final EmbeddingClient embeddingClient;
-    public TogetherAiService(WebClient.Builder webClientBuilder, EmbeddingClient embeddingClient,
-                             SearchService searchService, JdbcTemplate jdbcTemplate, EmbeddingClient embeddingClient1) {
+
+    public TogetherAiService(WebClient.Builder webClientBuilder,
+                             JdbcTemplate jdbcTemplate) {
         this.webClientBuilder = webClientBuilder;
-        this.vectorStore = new PgVectorStore(jdbcTemplate,embeddingClient,4);
-        this.searchService = searchService;
         this.jdbcTemplate = jdbcTemplate;
-        this.embeddingClient = embeddingClient1;
     }
 
-    public Mono<String> generateResponse(String model, String query, String information) {
+    public Mono<String> generateResponse( String query, String information) {
         var systemPromptTemplate = new SystemPromptTemplate(
                 """
-                        You are a question answering bot, and you must follow these rules:
-                                      
-                                          * You must answer the question based ONLY on the provided SOURCEDATA.
-                                          * Replies should have two parts, the first part is the answer, the second part is a bulleted list of SOURCEDATA links to the unique PASSAGE URL values of the referenced passages with the PASSAGE TITLE of the pages as the link text.
-                                          * Use one of the TEMPLATES below when answering questions.
-                                      
-                                          TEMPLATE #1 - Used when you can provide an answer based on the SOURCEDATA:
-                                          According to the information available to me, the answer is 42.
-                                      
-                                          Source(s):
-                                            * [PASSAGE TITLE 1](PASSAGE URL 1)
-                                            * [PASSAGE TITLE 2](PASSAGE URL 2)
-                                          END TEMPLATE.
-                                      
-                                          TEMPLATE #2 - Used when you can't answer the question based on the SOURCEDATA:
-                                          I'm sorry, I don't have enough information to answer that question.
-                                          END TEMPLATE.
-                                      
-                                          ----------------
-                                          SOURCEDATA:
-                                      
-                                      {information}
-                """);
+                                You are a question answering bot, and you must follow these rules:
+                                              
+                                                  * You must answer the question based ONLY on the provided SOURCEDATA.
+                                                  * Replies should have two parts, the first part is the answer, the second part is a bulleted list of SOURCEDATA links to the unique PASSAGE URL values of the referenced passages with the PASSAGE TITLE of the pages as the link text.
+                                                  * Use one of the TEMPLATES below when answering questions.
+                                              
+                                                  TEMPLATE #1 - Used when you can provide an answer based on the SOURCEDATA:
+                                                  According to the information available to me, the answer is 42.
+                                              
+                                                  Source(s):
+                                                    * [PASSAGE TITLE 1](PASSAGE URL 1)
+                                                    * [PASSAGE TITLE 2](PASSAGE URL 2)
+                                                  END TEMPLATE.
+                                              
+                                                  TEMPLATE #2 - Used when you can't answer the question based on the SOURCEDATA:
+                                                  I'm sorry, I don't have enough information to answer that question.
+                                                  END TEMPLATE.
+                                              
+                                                  ----------------
+                                                  SOURCEDATA:
+                                              
+                                              {information}
+                        """);
 
         var systemMessage = systemPromptTemplate.createMessage(Map.of("information", information));
         var userPromptTemplate = new PromptTemplate("{query}");
         var userMessage = userPromptTemplate.createMessage(Map.of("query", query));
         var prompt = new Prompt(List.of(systemMessage, userMessage));
-        PromptRequest payload = new PromptRequest(model, prompt.toString(), false);
 
         WebClient webClient = WebClient.builder()
-                .baseUrl(API_URL)
+                .baseUrl(API_URL_COMPLETION)
                 .defaultHeader("Authorization", "Bearer " + BEARER_TOKEN)
                 .defaultHeader("accept", "application/json")
                 .defaultHeader("content-type", "application/json")
@@ -97,6 +86,7 @@ public class TogetherAiService {
         try {
             // Escape the information string to be valid JSON
             ObjectMapper objectMapper = new ObjectMapper();
+
             String escapedInformation = objectMapper.writeValueAsString(systemMessage.getContent());
 
             String requestBody = "{\n" +
@@ -143,8 +133,7 @@ public class TogetherAiService {
     }
 
 
-    public List<Double> embedd(String requestData)
-    {
+    public List<Double> embedd(String requestData) {
         WebClient webClient = WebClient.builder()
                 .baseUrl(API_URL_EMBD)
                 .defaultHeader("Authorization", "Bearer " + BEARER_TOKEN)
@@ -155,15 +144,14 @@ public class TogetherAiService {
         String requestBody = "{\n" +
                 "  \"model\": \"togethercomputer/m2-bert-80M-8k-retrieval\",\n" +
                 "  \"input\": \"" + requestData.replace("\n", "\\n").replace("\"", "\\\"") + "\"\n" +
-                "}";;
+                "}";
+        ;
 
 
-
-
-         Mono<String> stringMono= webClient.post()
-                 .body(BodyInserters.fromValue(requestBody))
-            .retrieve()
-            .bodyToMono(String.class);
+        Mono<String> stringMono = webClient.post()
+                .body(BodyInserters.fromValue(requestBody))
+                .retrieve()
+                .bodyToMono(String.class);
 
         JSONObject jsonObject = new JSONObject(stringMono.block());
 
@@ -190,12 +178,11 @@ public class TogetherAiService {
         return embeddingList;
     }
 
-    public String  embeddAsString(String question)
-    {
+    public String embeddAsString(String question) {
         WebClient webClient = webClientBuilder.baseUrl(togetherAiUrl).build();
-        Mono<String> stringMono= webClient.post()
+        Mono<String> stringMono = webClient.post()
                 .uri("/v1/embeddings")
-                .header("Authorization", "Bearer " + "")
+                .header("Authorization", "Bearer " + BEARER_TOKEN)
                 .header("accept", "application/json")
                 .header("content-type", "application/json")
                 .bodyValue("{\"model\": \"togethercomputer/m2-bert-80M-8k-retrieval\", \"input\": \"" + question + "\"}")
@@ -219,8 +206,8 @@ public class TogetherAiService {
         int i = 0;
 
         Double d;
-        for(Iterator var4 = embeddingDouble.iterator(); var4.hasNext(); embeddingFloat[i++] = d.floatValue()) {
-            d = (Double)var4.next();
+        for (Iterator var4 = embeddingDouble.iterator(); var4.hasNext(); embeddingFloat[i++] = d.floatValue()) {
+            d = (Double) var4.next();
         }
 
         return embeddingFloat;

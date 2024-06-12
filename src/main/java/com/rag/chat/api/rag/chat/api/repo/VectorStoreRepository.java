@@ -12,11 +12,11 @@ import java.util.List;
 public interface VectorStoreRepository extends JpaRepository<EmbeddingVectorStore, Long> {
 
     @Query(value = " SELECT *, (1 + (embedding <#> :param1)) AS distance " +
-            "FROM vector_store1 WHERE (1 + (embedding <#> :param1)) < 1.0 ORDER BY distance LIMIT 4"
+            "FROM ebids.vector_store1 WHERE (1 + (embedding <#> :param1)) < 1.0 ORDER BY distance LIMIT 4"
             , nativeQuery = true)
     List<Object[]> findTop4ByVector(@Param("param1") PGvector vector);
 
-    @Query(value = " SELECT distinct metadata FROM vector_store1"
+    @Query(value = " SELECT distinct metadata FROM ebids.vector_store1"
             , nativeQuery = true)
     List<String> getFileNames();
 

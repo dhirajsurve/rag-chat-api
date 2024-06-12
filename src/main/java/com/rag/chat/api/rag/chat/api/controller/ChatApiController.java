@@ -4,12 +4,9 @@ import com.rag.chat.api.rag.chat.api.model.ChatRequest;
 import com.rag.chat.api.rag.chat.api.processor.PdfFileReader;
 import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import com.rag.chat.api.rag.chat.api.service.VectorStoreService;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,17 +18,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RestController
-public class OllamaChatController {
+public class ChatApiController {
      private final PdfFileReader pdfFileReader;
      private final VectorStoreService vectorStoreService;
-    @Value("${spring.ai.ollama.chat.options.model}")
-    private String model;
-
 
     private final TogetherAiService togetherAiService;
     @Autowired
-    public OllamaChatController(PdfFileReader pdfFileReader, VectorStoreService vectorStoreService,
-                                TogetherAiService togetherAiService) {
+    public ChatApiController(PdfFileReader pdfFileReader, VectorStoreService vectorStoreService,
+                             TogetherAiService togetherAiService) {
          this.pdfFileReader = pdfFileReader;
         this.vectorStoreService = vectorStoreService;
         this.togetherAiService = togetherAiService;
@@ -52,7 +46,7 @@ public class OllamaChatController {
                 .map(doc -> (String) doc.get("content"))
                 .collect(Collectors.joining(System.lineSeparator()));
 
-        String response = togetherAiService.generateResponse(model, prompt.getPrompt(),information).block(); // Blocking call to get the response
+        String response = togetherAiService.generateResponse( prompt.getPrompt(),information).block(); // Blocking call to get the response
 
         System.out.println("Response:" + response);
 

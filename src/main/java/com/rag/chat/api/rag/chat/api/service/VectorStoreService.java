@@ -48,7 +48,9 @@ public class VectorStoreService {
 
         EmbeddingVectorStore embeddingVectorStore = new EmbeddingVectorStore();
         embeddingVectorStore.setContent(content);
-       embeddingVectorStore.setMetadata( filename);
+        embeddingVectorStore.setMetadata( filename);
+        //userId()
+        //auditFields
         embeddingVectorStore.setEmbedding(this.toFloatArray(embedding));
 
         System.out.println("Create record in vectorstore for "+ filename);
@@ -57,7 +59,7 @@ public class VectorStoreService {
 
     public void add(final List<Document> documents) {
         final int size = documents.size();
-        this.jdbcTemplate.batchUpdate("INSERT INTO vector_store1 (id, content, metadata, embedding) VALUES (?, ?, ?::jsonb, ?) ON CONFLICT (id) DO UPDATE SET content = ? , metadata = ?::jsonb , embedding = ? ", new BatchPreparedStatementSetter() {
+        this.jdbcTemplate.batchUpdate("INSERT INTO ebids.vector_store1 (id, content, metadata, embedding) VALUES (?, ?, ?::jsonb, ?) ON CONFLICT (id) DO UPDATE SET content = ? , metadata = ?::jsonb , embedding = ? ", new BatchPreparedStatementSetter() {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 Document document = (Document)documents.get(i);
                 String content = document.getContent();
@@ -89,7 +91,7 @@ public class VectorStoreService {
          PGvector queryEmbedding= new PGvector(this.toFloatArray(  togetherAiService.embedd(request.getQuery())));
 
         return this.jdbcTemplate.queryForList( "SELECT *, embedding <#> '"+queryEmbedding+"' AS" +
-                " distance FROM vector_store1 WHERE metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0 ORDER BY distance limit 6");
+                " distance FROM ebids.vector_store1 WHERE metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0 ORDER BY distance limit 6");
     }
 
 

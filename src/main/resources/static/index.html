@@ -11,6 +11,7 @@
             color: #333;
             margin: 0;
             padding: 0;
+            display: flex;
         }
 
         h1 {
@@ -26,6 +27,31 @@
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .files-container {
+            max-width: 200px;
+            margin-right: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
         }
 
         form {
@@ -88,6 +114,20 @@
     </style>
 </head>
 <body>
+<div class="files-container">
+    <h1>Files</h1>
+    <table id="filesTable">
+        <thead>
+        <tr>
+            <th>File Name</th>
+            <th>Select</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
 <div class="container">
     <h1>Chat App</h1>
 
@@ -112,7 +152,7 @@
         var formData = new FormData();
         formData.append('file', document.getElementById('file').files[0]);
 
-        fetch('http://127.0.0.1:5000/upload_pdf', {
+        fetch('http://localhost:8081/api/upload', {
             method: 'POST',
             body: formData
         })
@@ -125,6 +165,7 @@
             })
             .then(data => {
                 document.getElementById('uploadMessage').innerText = 'File uploaded successfully!';
+                loadFiles();
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -132,9 +173,21 @@
             });
     });
 
+    document.getElementById('file').addEventListener('change', function() {
+        document.getElementById('uploadMessage').innerText = '';
+    });
+
     document.getElementById('chatForm').addEventListener('submit', function(event) {
         event.preventDefault();
         var question = document.getElementById('question').value;
+        var selectedFile = document.querySelector('input[name="selectedFile"]:checked');
+
+        if (!selectedFile) {
+            alert('Please select a file.');
+            return;
+        }
+
+        var fileName = selectedFile.value;
 
         var chatHistory = document.getElementById('chatHistory');
         var message = document.createElement('div');
@@ -151,12 +204,12 @@
         document.getElementById('statusMessage').style.display = 'block';
         document.getElementById('statusMessage').innerText = 'Sending...';
 
-        fetch('http://127.0.0.1:8081/api/prompt', {
+        fetch('http://localhost:8081/api/prompt', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ prompt: question })
+            body: JSON.stringify({ prompt: question, fileName: fileName })
         })
             .then(response => response.json())
             .then(data => {
@@ -174,6 +227,36 @@
                 document.getElementById('statusMessage').innerText = 'Error occurred';
             });
     });
+
+    function loadFiles() {
+        fetch('http://localhost:8081/api/userfiles')
+            .then(response => response.json())
+            .then(data => {
+                var filesTable = document.getElementById('filesTable').getElementsByTagName('tbody')[0];
+                filesTable.innerHTML = ''; // Clear the table
+
+                data.forEach(file => {
+                    var row = filesTable.insertRow();
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+
+                    cell1.textContent = file;
+
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'radio';
+                    checkbox.name = 'selectedFile';
+                    checkbox.value = file;
+
+                    cell2.appendChild(checkbox);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Load files when the page loads
+    window.onload = loadFiles;
 </script>
 </body>
 </html>
