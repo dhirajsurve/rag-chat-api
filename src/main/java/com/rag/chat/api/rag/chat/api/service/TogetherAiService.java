@@ -142,7 +142,7 @@ public class TogetherAiService {
                 .build();
 
         String requestBody = "{\n" +
-                "  \"model\": \"togethercomputer/m2-bert-80M-8k-retrieval\",\n" +
+                "  \"model\": \"hazyresearch/M2-BERT-2k-Retrieval-Encoder-V1\",\n" +
                 "  \"input\": \"" + requestData.replace("\n", "\\n").replace("\"", "\\\"") + "\"\n" +
                 "}";
         ;
@@ -185,7 +185,7 @@ public class TogetherAiService {
                 .header("Authorization", "Bearer " + BEARER_TOKEN)
                 .header("accept", "application/json")
                 .header("content-type", "application/json")
-                .bodyValue("{\"model\": \"togethercomputer/m2-bert-80M-8k-retrieval\", \"input\": \"" + question + "\"}")
+                .bodyValue("{\"model\": \"hazyresearch/M2-BERT-2k-Retrieval-Encoder-V1\", \"input\": \"" + question + "\"}")
                 .retrieve()
                 .bodyToMono(String.class);
         JSONObject jsonObject = new JSONObject(stringMono.block());

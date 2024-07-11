@@ -116,6 +116,9 @@
 <body>
 <div class="files-container">
     <h1>Files</h1>
+    <label for="userId">User ID:</label>
+    <input type="text" id="userId" name="userId" placeholder="Enter User ID">
+    <button onclick="loadFiles()">Load Files</button>
     <table id="filesTable">
         <thead>
         <tr>
@@ -149,8 +152,10 @@
 <script>
     document.getElementById('uploadForm').addEventListener('submit', function(event) {
         event.preventDefault();
+        var userId = document.getElementById('userId').value || '1234';
         var formData = new FormData();
         formData.append('file', document.getElementById('file').files[0]);
+        formData.append('userId', userId);
 
         fetch('http://localhost:8081/api/upload', {
             method: 'POST',
@@ -181,6 +186,7 @@
         event.preventDefault();
         var question = document.getElementById('question').value;
         var selectedFile = document.querySelector('input[name="selectedFile"]:checked');
+        var userId = document.getElementById('userId').value || '1234';
 
         if (!selectedFile) {
             alert('Please select a file.');
@@ -209,7 +215,7 @@
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ prompt: question, fileName: fileName })
+            body: JSON.stringify({ prompt: question, fileName: fileName, userId: userId })
         })
             .then(response => response.json())
             .then(data => {
@@ -229,7 +235,9 @@
     });
 
     function loadFiles() {
-        fetch('http://localhost:8081/api/userfiles')
+        var userId = document.getElementById('userId').value || '1234'; // Use 'test' if userId is null or empty
+
+        fetch(`http://localhost:8081/api/userfiles?userId=${userId}`)
             .then(response => response.json())
             .then(data => {
                 var filesTable = document.getElementById('filesTable').getElementsByTagName('tbody')[0];

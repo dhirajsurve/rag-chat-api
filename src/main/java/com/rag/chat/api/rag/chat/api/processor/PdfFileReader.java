@@ -9,10 +9,8 @@ import org.springframework.stereotype.Component;
 import com.google.gson.Gson;
 import org.springframework.web.multipart.MultipartFile;
 
-import static com.rag.chat.api.rag.chat.api.utils.DoubleArrayConverter.convertListToArray;
-
 @Component
-public class PdfFileReader { 
+public class PdfFileReader {
     private final VectorStoreService vectorStoreService;
 
     private final TogetherAiService togetherAiService;
@@ -22,7 +20,7 @@ public class PdfFileReader {
     }
 
    // @Async
-    public void pdfEmbedding(MultipartFile file) {
+    public void pdfEmbedding(MultipartFile file, Long userId) {
          var config = PdfDocumentReaderConfig.builder()
                 .withPageExtractedTextFormatter(new ExtractedTextFormatter.Builder().build())
                 .build();
@@ -41,7 +39,8 @@ public class PdfFileReader {
                 vectorStoreService.createVectorStore(
                         document.getContent(),
                         (String) document.getMetadata().get("file_name"),
-                         togetherAiService.embedd(document.getContent())
+                         togetherAiService.embedd(document.getContent()),
+                        userId
                 );
             });
 
@@ -53,7 +52,7 @@ public class PdfFileReader {
 //
 //        var config = PdfDocumentReaderConfig.builder()
 //                .withPageExtractedTextFormatter(
-//                        new ExtractedTextFormatter.Builder()
+//                       p89 new ExtractedTextFormatter.Builder()
 //                                .build())
 //                .build();
 //

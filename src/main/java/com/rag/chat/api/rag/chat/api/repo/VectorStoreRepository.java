@@ -16,8 +16,8 @@ public interface VectorStoreRepository extends JpaRepository<EmbeddingVectorStor
             , nativeQuery = true)
     List<Object[]> findTop4ByVector(@Param("param1") PGvector vector);
 
-    @Query(value = " SELECT distinct metadata FROM ebids.vector_store1"
+    @Query(value = " SELECT distinct metadata FROM ebids.vector_store1 WHERE user_id= :param1"
             , nativeQuery = true)
-    List<String> getFileNames();
+    List<String> getFileNames(@Param("param1")Long userId);
 
 }

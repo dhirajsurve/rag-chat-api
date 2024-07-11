@@ -3,6 +3,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 import com.rag.chat.api.rag.chat.api.entity.EmbeddingVectorStore;
+import com.rag.chat.api.rag.chat.api.model.ChatRequest;
 import com.rag.chat.api.rag.chat.api.repo.VectorStoreRepository;
 import org.postgresql.util.PGobject;
 import org.springframework.ai.document.Document;
@@ -38,19 +39,18 @@ public class VectorStoreService {
         this.filterExpressionConverter =  new PgVectorFilterExpressionConverter();
      }
 
-     public List<String> getListofFilesName()
+     public List<String> getListofFilesName(Long userId)
      {
-         return vectorStoreRepository.getFileNames();
+         return vectorStoreRepository.getFileNames(userId);
      }
 
     @Transactional
-    public void createVectorStore(String content, String filename, List<Double>   embedding) {
+    public void createVectorStore(String content, String filename, List<Double>   embedding, Long userId) {
 
         EmbeddingVectorStore embeddingVectorStore = new EmbeddingVectorStore();
         embeddingVectorStore.setContent(content);
         embeddingVectorStore.setMetadata( filename);
-        //userId()
-        //auditFields
+        embeddingVectorStore.setUserId(userId);
         embeddingVectorStore.setEmbedding(this.toFloatArray(embedding));
 
         System.out.println("Create record in vectorstore for "+ filename);
@@ -79,7 +79,11 @@ public class VectorStoreService {
         });
     }
 
-    public List<Map<String, Object>> similaritySearch(SearchRequest request,String filename) {
+    public List<Map<String, Object>> similaritySearch(ChatRequest prompt) {
+
+        var request= SearchRequest.query(prompt.getPrompt());
+        var filename =prompt.getFileName();
+
         String nativeFilterExpression = request.getFilterExpression() != null ? this.filterExpressionConverter.convertExpression(request.getFilterExpression()) : "";
         String jsonPathFilter = "";
         if (StringUtils.hasText(nativeFilterExpression)) {
@@ -91,7 +95,7 @@ public class VectorStoreService {
          PGvector queryEmbedding= new PGvector(this.toFloatArray(  togetherAiService.embedd(request.getQuery())));
 
         return this.jdbcTemplate.queryForList( "SELECT *, embedding <#> '"+queryEmbedding+"' AS" +
-                " distance FROM ebids.vector_store1 WHERE metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0 ORDER BY distance limit 6");
+                " distance FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' and metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0 ORDER BY distance limit 8");
     }
 
 

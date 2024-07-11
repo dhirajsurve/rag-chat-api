@@ -40,7 +40,7 @@ public class ChatApiController {
          throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Question cant be empty.");
         }
 
-        List<Map<String, Object>> similarDocuments=vectorStoreService.similaritySearch(SearchRequest.query(prompt.getPrompt()),prompt.getFileName());
+        List<Map<String, Object>> similarDocuments=vectorStoreService.similaritySearch(prompt);
 
         String information =  similarDocuments.stream()
                 .map(doc -> (String) doc.get("content"))
@@ -57,9 +57,9 @@ public class ChatApiController {
     }
 
     @PostMapping("/api/upload")
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam("userId") Long userId) {
         String fileName = file.getResource().getFilename();
-        pdfFileReader.pdfEmbedding(file);
+        pdfFileReader.pdfEmbedding(file,userId);
 
         Map<String, String> response = new HashMap<>();
         response.put("fileName", fileName);
@@ -73,8 +73,8 @@ public class ChatApiController {
     }
 
     @GetMapping("/api/userfiles")
-    public ResponseEntity<List<String>> getFileList() {
-        System.out.println("Getting list of filename.");
-     return   new ResponseEntity<>(vectorStoreService.getListofFilesName(),HttpStatus.OK);
+    public ResponseEntity<List<String>> getFileList(@RequestParam("userId") Long userId) {
+        System.out.println("Getting list of filename for userId:."+userId);
+     return   new ResponseEntity<>(vectorStoreService.getListofFilesName(userId),HttpStatus.OK);
     }
     }

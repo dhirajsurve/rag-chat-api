@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ebids.vector_store1")
+@Table(name = "vector_store1",schema = "ebids")
 public class EmbeddingVectorStore {
 
     @Id
@@ -22,7 +22,17 @@ public class EmbeddingVectorStore {
     @Column(name = "embedding", columnDefinition = "vector(768)")
     private float[] embedding;
 
-    // Getters and Setters
+    @Column(name = "user_id")
+    private Long userId;
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+         this.userId = userId;
+    }
+// Getters and Setters
 
     public UUID getId() {
         return id;
