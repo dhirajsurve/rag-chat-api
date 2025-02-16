@@ -31,15 +31,19 @@ public class PdfFileReader {
            // vectorStoreService.add(textSplitter.apply(pdfReader.get()));
             textSplitter.apply(pdfReader.get()).forEach(document -> {
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(3000);
                     System.out.println("Sleeping for 2s to avoid too many calls.");
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                vectorStoreService.createVectorStore(
+                  vectorStoreService.createVectorStore(
                         document.getContent(),
                         (String) document.getMetadata().get("file_name"),
-                         togetherAiService.embedd(document.getContent()),
+                         togetherAiService.embedd(document.getContent()
+                                 .replace("__","")
+                                 .replace("  ","")
+                                 .replace("......","")
+                                 .replace("--","")),
                         userId
                 );
             });

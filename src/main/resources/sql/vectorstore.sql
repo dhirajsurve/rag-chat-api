@@ -23,3 +23,13 @@ CREATE TABLE IF NOT EXISTS public.vector_store1
     )
 
     TABLESPACE pg_default;
+
+CREATE TABLE IF NOT EXISTS ebids.vector_store2
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    content text COLLATE pg_catalog."default",
+    metadata text,
+    embedding vector(1536),
+    user_id bigint,
+    CONSTRAINT vector_store2_pkey PRIMARY KEY ( id )
+    )

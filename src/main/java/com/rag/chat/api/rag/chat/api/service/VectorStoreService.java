@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
@@ -79,6 +80,7 @@ public class VectorStoreService {
         });
     }
 
+
     public List<Map<String, Object>> similaritySearch(ChatRequest prompt) {
 
         var request= SearchRequest.query(prompt.getPrompt());
@@ -95,9 +97,41 @@ public class VectorStoreService {
          PGvector queryEmbedding= new PGvector(this.toFloatArray(  togetherAiService.embedd(request.getQuery())));
 
         return this.jdbcTemplate.queryForList( "SELECT *, embedding <#> '"+queryEmbedding+"' AS" +
-                " distance FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' and metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0 ORDER BY distance limit 8");
+                " distance FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' and metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0  ORDER BY distance limit 8");
     }
 
+    public List<Map<String, Object>> listOfIds(ChatRequest prompt) {
+        return this.jdbcTemplate.queryForList( "SELECT ID FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' and metadata='"+prompt.getFileName()+"'  ");
+    }
+
+    public List<Map<String, Object>> similaritySearchByIds(ChatRequest prompt, List<String> ids) {
+
+        var request= SearchRequest.query(prompt.getPrompt());
+        var filename =prompt.getFileName();
+
+        String nativeFilterExpression = request.getFilterExpression() != null ? this.filterExpressionConverter.convertExpression(request.getFilterExpression()) : "";
+        String jsonPathFilter = "";
+        if (StringUtils.hasText(nativeFilterExpression)) {
+            jsonPathFilter = " AND metadata::jsonb @@ '" + nativeFilterExpression + "'::jsonpath ";
+        }
+
+        double distance = 1.0 - request.getSimilarityThreshold();
+
+        PGvector queryEmbedding= new PGvector(this.toFloatArray(  togetherAiService.embedd(request.getQuery())));
+        String idsString = ids.stream()
+                .map(id -> "'" + id + "'")
+                .collect(Collectors.joining(","));
+
+
+//        return this.jdbcTemplate.queryForList( "SELECT * FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' " +
+//                "AND id IN (" + idsString + ")"+
+//                " and metadata='"+filename+"' ");
+
+         return this.jdbcTemplate.queryForList( "SELECT *, embedding <#> '"+queryEmbedding+"' AS" +
+                " distance FROM ebids.vector_store1 WHERE user_id='"+ prompt.getUserId()+"' " +
+                        "AND id IN (" + idsString + ")"+
+                "AND id IN (" + idsString + ") and metadata='"+filename+"' and embedding <#> '"+queryEmbedding+"' < 1.0  ORDER BY distance limit 8");
+    }
 
 
     public static enum PgDistanceType {
