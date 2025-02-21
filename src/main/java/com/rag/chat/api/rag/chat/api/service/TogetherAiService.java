@@ -3,6 +3,7 @@ package com.rag.chat.api.rag.chat.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.chat.api.rag.chat.api.model.BatchResponse;
 import com.rag.chat.api.rag.chat.api.model.UploadFileResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -11,21 +12,20 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 @Service
@@ -148,7 +148,84 @@ public class TogetherAiService {
         }
     }
 
-    public Mono<UploadFileResponse> uploadFile(MultipartFile file) throws IOException {
+
+
+    public Mono<UploadFileResponse> generateResponseBatch(String query, String information) {
+        var systemPromptTemplate = new SystemPromptTemplate(
+                """
+                     Role: Act as a construction manager to extract the text. 
+                     Task: Your task is to extract the text from the provided source data for the given question.
+                      Here is the source data:
+                       
+                     Context:
+                      {information}
+                       
+                       Now, please answer the following question:
+                     Question:
+                       {user_question}
+                       
+                     Instructions: Keep the formatting as it is. 
+                     Constraint:  Do not use any external knowledge or data beyond what is provided in the source. If there is no answer in the source data, respond with "no answer available." Strictly follow these instructions.
+                                                                                                                               
+""");
+        HashMap<String,Object> map= new HashMap<>();
+        if(!information.isBlank())
+            map.put("information", information);
+        else
+            return null;
+
+        map.put("user_question", query);
+        var systemMessage = systemPromptTemplate.createMessage(map);
+        var userPromptTemplate = new PromptTemplate("{query}");
+        var userMessage = userPromptTemplate.createMessage(Map.of("query", query));
+
+
+        try {
+            // Escape the information string to be valid JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            String escapedInformation = objectMapper.writeValueAsString(systemMessage.getContent());
+
+            System.out.println("escapedInformation:"+escapedInformation);
+
+             String requestBody = objectMapper.writeValueAsString(
+                    Map.of(
+                            "custom_id", "request-1",
+                            "method", "POST",
+                            "url", "/v1/chat/completions",
+                            "body", Map.of(
+                                    "model", "gpt-4o",
+                                    "messages", List.of(
+                                            Map.of("role", "user", "content", escapedInformation)
+                                    )
+                            )
+                    )
+            );
+
+            // Create a temp JSONL file
+            Path tempFile = Files.createTempFile("openai_request", ".jsonl");
+            try (BufferedWriter writer = Files.newBufferedWriter(tempFile)) {
+                try {
+                    writer.write(requestBody);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    writer.newLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+
+            return uploadFile(convertFileToResource(tempFile));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Mono.error(new RuntimeException("Error processing JSON", e));
+        }
+    }
+
+    public Mono<UploadFileResponse> uploadFile(ByteArrayResource file) throws IOException {
 
         WebClient webClient = WebClient.builder()
                 .baseUrl(OpenAiUrl+"/v1/files")
@@ -156,12 +233,7 @@ public class TogetherAiService {
                 .build();
 
         MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("file", new ByteArrayResource(file.getBytes()) {
-            @Override
-            public String getFilename() {
-                return file.getOriginalFilename();
-            }
-        }).contentType(MediaType.APPLICATION_OCTET_STREAM);
+        bodyBuilder.part("file",  file).contentType(MediaType.APPLICATION_OCTET_STREAM);
 
         bodyBuilder.part("purpose", "batch"); // OpenAI requires a "purpose" field
 
@@ -175,7 +247,17 @@ public class TogetherAiService {
     }
 
 
-    public Mono<ResponseEntity<?>> sendBatchRequest(String inputFileId) {
+    public static ByteArrayResource convertFileToResource(Path filePath) throws IOException {
+        byte[] fileBytes = Files.readAllBytes(filePath);
+        return new ByteArrayResource(fileBytes) {
+            @Override
+            public String getFilename() {
+                return filePath.getFileName().toString();
+            }
+        };
+    }
+
+    public BatchResponse sendBatchRequest(String inputFileId) {
         Map<String, String> requestBody = Map.of(
                 "input_file_id", inputFileId,
                 "endpoint", "/v1/chat/completions",
@@ -192,11 +274,11 @@ public class TogetherAiService {
         return webClient.post()
                 .bodyValue(requestBody)
                 .retrieve()
-                .bodyToMono(Map.class)
-                .map(ResponseEntity::ok);
+                .bodyToMono(BatchResponse.class)
+                .map(ResponseEntity::ok).block().getBody();
     }
 
-    public Mono<ResponseEntity<?>> monitorBatch(String batchId) {
+    public BatchResponse monitorBatch(String batchId) {
         WebClient webClient = WebClient.builder()
                 .baseUrl(OpenAiUrl+"/v1/batches/"+ batchId)
                 .defaultHeader("Authorization", "Bearer " + BEARER_TOKEN)
@@ -207,14 +289,8 @@ public class TogetherAiService {
 
         return webClient.get()
                 .retrieve()
-                .bodyToMono(Map.class)
-                .flatMap(response -> {
-                    String outputFileId = (String) response.get("output_file_id");
-                    if (outputFileId != null) {
-                        return fetchFileContent(outputFileId);
-                    }
-                    return Mono.just(ResponseEntity.status(HttpStatus.NO_CONTENT).body("Output file not available yet"));
-                });
+                .bodyToMono(BatchResponse.class)
+                .block();
     }
 
     private Mono<ResponseEntity<?>> fetchFileContent(String fileId) {

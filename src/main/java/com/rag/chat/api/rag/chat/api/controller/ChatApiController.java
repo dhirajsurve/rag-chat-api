@@ -1,17 +1,16 @@
 package com.rag.chat.api.rag.chat.api.controller;
 
 import com.rag.chat.api.rag.chat.api.model.ChatRequest;
+import com.rag.chat.api.rag.chat.api.model.UploadFileResponse;
 import com.rag.chat.api.rag.chat.api.processor.PdfFileReader;
 import com.rag.chat.api.rag.chat.api.service.TextFileSplitService;
 import com.rag.chat.api.rag.chat.api.service.TogetherAiService;
 import com.rag.chat.api.rag.chat.api.service.VectorStoreService;
-import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.*;
@@ -130,17 +129,77 @@ public class ChatApiController {
      return   new ResponseEntity<>(vectorStoreService.getListofFilesName(userId),HttpStatus.OK);
     }
 
-    @PostMapping(value = "api/upload/batchfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<ResponseEntity<?>> uploadJsonlFile(@RequestParam("file") MultipartFile file) throws IOException {
-        return togetherAiService.uploadFile(file)
-                .flatMap(response -> togetherAiService.sendBatchRequest(response.getId()))
-                .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage())));
+
+    @PostMapping(value = "/api/prompt/batch", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> generateResponseBatch(@RequestBody ChatRequest prompt) throws InterruptedException {
+        System.out.println("chatrequest:" + prompt);
+
+        if(prompt.getPrompt()==null || Objects.equals(prompt.getPrompt(), "")) {
+            System.out.println("Question cant be empty.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Question cant be empty.");
+        }
+
+
+        List<String> ids= vectorStoreService.listOfIds(prompt).stream()
+                .map(doc ->   doc.get("id").toString()).toList();
+
+        System.out.println("count:"+ids.size());
+
+        var response= new UploadFileResponse();
+        List<Map<String, Object>> similarDocuments = new ArrayList<>();
+        if (ids.size() > 30) {
+            List<List<String>> chunks = chunkList(ids, 10);
+            for (List<String> chunk : chunks) {
+                Thread.sleep(2000);
+                similarDocuments=vectorStoreService.similaritySearchByIds(prompt,chunk);
+                String information =  similarDocuments.stream()
+                        .map(doc -> (String) doc.get("content"))
+                        .collect(Collectors.joining(System.lineSeparator()));
+
+                System.out.println("information:"+information);
+
+                Thread.sleep(5000);
+                var temp_response=togetherAiService.generateResponseBatch(prompt.getPrompt(), information).block();
+
+
+                return ResponseEntity.ok(temp_response.getId());
+            }
+        } else {
+            similarDocuments = vectorStoreService.similaritySearch(prompt);
+            String information =  similarDocuments.stream()
+                    .map(doc -> (String) doc.get("content"))
+                    .collect(Collectors.joining(System.lineSeparator()));
+
+            response =  togetherAiService.generateResponseBatch(prompt.getPrompt(), information).block() ; // Blocking call to get the response
+
+        }
+
+
+        System.out.println("Response:" + response);
+
+        Map<String, String> responseData = new HashMap<>();
+        responseData.put("response", response.toString());
+
+        var resp= togetherAiService.sendBatchRequest(response.getId());
+
+        var batchResponse =togetherAiService.monitorBatch(resp.getId());
+        // Save batchResponse to DB .
+        // Batch job will pick these request and if  "status": "completed" then will call fetchFileContent(batchResponse.output_file_id) to get the response
+        // and update the record with response and status to completed
+        return ResponseEntity.ok("Batch Requested.");
     }
 
-    @GetMapping("api/monitor/{batchId}")
-    public Mono<ResponseEntity<?>> monitorBatch(@PathVariable String batchId) {
-        return togetherAiService.monitorBatch(batchId);
-    }
+//    @PostMapping(value = "api/upload/batchfile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public Mono<ResponseEntity<?>> uploadJsonlFile(@RequestParam("file") MultipartFile file) throws IOException {
+//        return togetherAiService.uploadFile(file)
+//                .flatMap(response -> togetherAiService.sendBatchRequest(response.getId()))
+//                .onErrorResume(e -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage())));
+//    }
+//
+//    @GetMapping("api/monitor/{batchId}")
+//    public Mono<ResponseEntity<?>> monitorBatch(@PathVariable String batchId) {
+//        return togetherAiService.monitorBatch(batchId);
+//    }
 
     private boolean isTextFile(MultipartFile file) {
         String contentType = file.getContentType();
