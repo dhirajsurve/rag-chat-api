@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        h1 {
+            color: #1e88e5;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .files-container {
+            max-width: 200px;
+            margin-right: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="file"], button {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        input[type="submit"], button {
+            background-color: #009688;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover, button:hover {
+            background-color: #00796b;
+        }
+
+        .chat-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin-bottom: 20px;
+        }
+
+        .question {
+            background-color: #e0f2f1;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .answer {
+            background-color: #dcedc8;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .info-message {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="files-container">
+    <h1>Files</h1>
+    <label for="userId">User ID:</label>
+    <input type="text" id="userId" name="userId" placeholder="Enter User ID">
+    <button onclick="loadFiles()">Load Files</button>
+    <table id="filesTable">
+        <thead>
+        <tr>
+            <th>File Name</th>
+            <th>Select</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<div class="container">
+    <h1>Chat App</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="file">
+        <button type="submit">Upload</button>
+        <p id="uploadMessage"></p>
+    </form>
+
+    <form id="chatForm">
+        <input type="text" name="question" id="question" placeholder="Type your question here...">
+        <button type="submit">Submit</button>
+    </form>
+
+    <div class="chat-container" id="chatHistory"></div>
+    <div class="info-message" id="statusMessage">Waiting...</div>
+</div>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var userId = document.getElementById('userId').value || '1234';
+        var formData = new FormData();
+        formData.append('file', document.getElementById('file').files[0]);
+        formData.append('userId', userId);
+
+        fetch('http://localhost:8081/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (response.status === 200) {
+                    return response.text();
+                } else {
+                    throw new Error('Non-200 response');
+                }
+            })
+            .then(data => {
+                document.getElementById('uploadMessage').innerText = 'File uploaded successfully!';
+                loadFiles();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('uploadMessage').innerText = 'File upload failed.';
+            });
+    });
+
+    document.getElementById('file').addEventListener('change', function() {
+        document.getElementById('uploadMessage').innerText = '';
+    });
+
+    document.getElementById('chatForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var question = document.getElementById('question').value;
+        var selectedFile = document.querySelector('input[name="selectedFile"]:checked');
+        var userId = document.getElementById('userId').value || '1234';
+
+
+        var fileName = 'selectedFile.value';
+
+        var chatHistory = document.getElementById('chatHistory');
+        var message = document.createElement('div');
+        message.classList.add('message');
+
+        var questionDiv = document.createElement('div');
+        questionDiv.classList.add('question');
+        questionDiv.innerText = 'Question: ' + question;
+
+        message.appendChild(questionDiv);
+
+        chatHistory.insertBefore(message, chatHistory.firstChild);
+
+        document.getElementById('statusMessage').style.display = 'block';
+        document.getElementById('statusMessage').innerText = 'Sending...';
+
+        fetch('http://localhost:8081/api/prompt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt: question, fileName: fileName, userId: userId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                var answerDiv = document.createElement('div');
+                answerDiv.classList.add('answer');
+                answerDiv.innerText = 'Answer: ' + data.response;
+
+                message.appendChild(answerDiv);
+
+                document.getElementById('question').value = '';
+                document.getElementById('statusMessage').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('statusMessage').innerText = 'Error occurred';
+            });
+    });
+
+    function loadFiles() {
+        var userId = document.getElementById('userId').value || '1234'; // Use 'test' if userId is null or empty
+
+        fetch(`http://localhost:8081/api/userfiles?userId=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                var filesTable = document.getElementById('filesTable').getElementsByTagName('tbody')[0];
+                filesTable.innerHTML = ''; // Clear the table
+
+                data.forEach(file => {
+                    var row = filesTable.insertRow();
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+
+                    cell1.textContent = file;
+
+                    var checkbox = document.createElement('input');
+                    checkbox.type = 'radio';
+                    checkbox.name = 'selectedFile';
+                    checkbox.value = file;
+
+                    cell2.appendChild(checkbox);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Load files when the page loads
+    window.onload = loadFiles;
+</script>
+</body>
+</html>

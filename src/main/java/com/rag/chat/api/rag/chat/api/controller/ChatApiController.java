@@ -56,21 +56,21 @@ public class ChatApiController {
         return ResponseEntity.ok(responseData);
     }
 
-    @PostMapping("/api/upload")
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam("userId") Long userId) {
-        String fileName = file.getResource().getFilename();
-        pdfFileReader.pdfEmbedding(file,userId);
-
-        Map<String, String> response = new HashMap<>();
-        response.put("fileName", fileName);
-         response.put("fileType", file.getContentType());
-        response.put("size", String.valueOf(file.getSize()));
-
-        System.out.println("fileName:"+ fileName);
-        System.out.println("size:"+  file.getSize());
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+//    @PostMapping("/api/upload")
+//    public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam("userId") Long userId) {
+//        String fileName = file.getResource().getFilename();
+//        pdfFileReader.pdfEmbedding(file,userId);
+//
+//        Map<String, String> response = new HashMap<>();
+//        response.put("fileName", fileName);
+//         response.put("fileType", file.getContentType());
+//        response.put("size", String.valueOf(file.getSize()));
+//
+//        System.out.println("fileName:"+ fileName);
+//        System.out.println("size:"+  file.getSize());
+//
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
 
     @GetMapping("/api/userfiles")
     public ResponseEntity<List<String>> getFileList(@RequestParam("userId") Long userId) {
