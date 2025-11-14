@@ -4,8 +4,8 @@ public   class ChatRequest {
     private String fileName;
     private Long userId;
 
-    public Long getUserId() {
-        return userId;
+    public String getUserId() {
+        return userId.toString();
     }
 
     public void setUserId(Long userId) {

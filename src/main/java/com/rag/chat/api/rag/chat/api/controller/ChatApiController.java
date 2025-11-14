@@ -71,10 +71,10 @@ public class ChatApiController {
 //
 //        return new ResponseEntity<>(response, HttpStatus.OK);
 //    }
-
-    @GetMapping("/api/userfiles")
-    public ResponseEntity<List<String>> getFileList(@RequestParam("userId") Long userId) {
-        System.out.println("Getting list of filename for userId:."+userId);
-     return   new ResponseEntity<>(vectorStoreService.getListofFilesName(userId),HttpStatus.OK);
-    }
+//
+//    @GetMapping("/api/userfiles")
+//    public ResponseEntity<List<String>> getFileList(@RequestParam("userId") Long userId) {
+//        System.out.println("Getting list of filename for userId:."+userId);
+//     return   new ResponseEntity<>(vectorStoreService.getListofFilesName(userId),HttpStatus.OK);
+//    }
     }

@@ -2,7 +2,9 @@ package com.rag.chat.api.rag.chat.api.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.chat.api.rag.chat.api.entity.UserFile;
 import com.rag.chat.api.rag.chat.api.model.ChatRequest;
+import com.rag.chat.api.rag.chat.api.repo.UserFileRepository;
 import com.rag.chat.api.rag.chat.api.service.MultipartInputStreamFileResource;
 import com.rag.chat.api.rag.chat.api.service.OpenAIService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,15 +12,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,8 +33,12 @@ public class ChatGptAssistantController {
     @Autowired
     OpenAIService openAIService;
 
+    @Autowired
+    UserFileRepository userFileRepository;
+
+    final String systemPrompt = "You are a document-reader assistant. I will upload a PDF, and you must read and index its full content.\nYour job:\n1. Extract all text exactly as it appears in the PDF.\n2. When I ask a question, return ONLY the exact text from the PDF that matches my question.\n3. Do NOT paraphrase, rewrite, summarize, or infer anything.\n4. If I ask for a bullet, section, paragraph, table, or clause, return it exactly as written in the PDF — same wording, same formatting, same spelling.\n5. If the answer does not exist in the PDF, respond with: \"Not found in the PDF.\"\n6. Never add extra commentary or interpretation. Only return the text from the document.";
     @PostMapping(value = "/api/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam("userId") Long userId) throws IOException {
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -61,8 +66,18 @@ public class ChatGptAssistantController {
 
         System.out.println("Uploaded file_id: " + fileId);
 
-        openAIService.createThreadRun("asst_K9ufIe4zr9rjxx1X9tWUp3i8",fileId,"Please read the attached PDF and answer questions based on it.");
+        //var treadId=openAIService.createThreadRun("asst_K9ufIe4zr9rjxx1X9tWUp3i8",fileId,systemPrompt);
 
+        // save information linked to user <> filename <> file_id <> thread_id in DB .
+        var userFiles=new UserFile();
+        userFiles.setUserId(userId.toString());
+        userFiles.setFileName(file.getOriginalFilename());
+        userFiles.setAssistantId("asst_K9ufIe4zr9rjxx1X9tWUp3i8");
+       // userFiles.setThreadId(treadId.replace("\"",""));
+        userFiles.setFileId(fileId);
+        userFiles.setCreatedDate(LocalDateTime.now());
+        userFileRepository.save(userFiles);
+        System.out.println("User_FIles record saved:"+userFiles);
 
         return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
     }
@@ -77,6 +92,13 @@ public class ChatGptAssistantController {
         responseData.put("response", response);
         return ResponseEntity.ok(responseData);
 
+    }
+
+
+    @GetMapping("/api/userfiles")
+    public ResponseEntity<List<String>> getFileList(@RequestParam("userId") Long userId) {
+        System.out.println("Getting list of filename for userId:."+userId);
+        return   new ResponseEntity<>(userFileRepository.findDistinctFileNameByUserId(String.valueOf(userId)),HttpStatus.OK);
     }
 
 }

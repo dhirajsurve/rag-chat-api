@@ -185,11 +185,16 @@
     document.getElementById('chatForm').addEventListener('submit', function(event) {
         event.preventDefault();
         var question = document.getElementById('question').value;
-        var selectedFile = document.querySelector('input[name="selectedFile"]:checked');
+        var selected = document.querySelector('input[name="selectedFile"]:checked');
         var userId = document.getElementById('userId').value || '1234';
 
+        if (!selected) {
+            alert('Please select a file.');
+            return;
+        }
 
-        var fileName = 'selectedFile.value';
+        // ✅ Get file name from first table cell instead of radio value
+        var fileName = selected.closest("tr").querySelector("td").innerText.trim();
 
         var chatHistory = document.getElementById('chatHistory');
         var message = document.createElement('div');
@@ -231,13 +236,13 @@
     });
 
     function loadFiles() {
-        var userId = document.getElementById('userId').value || '1234'; // Use 'test' if userId is null or empty
+        var userId = document.getElementById('userId').value || '1234';
 
         fetch(`http://localhost:8081/api/userfiles?userId=${userId}`)
             .then(response => response.json())
             .then(data => {
                 var filesTable = document.getElementById('filesTable').getElementsByTagName('tbody')[0];
-                filesTable.innerHTML = ''; // Clear the table
+                filesTable.innerHTML = '';
 
                 data.forEach(file => {
                     var row = filesTable.insertRow();
@@ -249,7 +254,6 @@
                     var checkbox = document.createElement('input');
                     checkbox.type = 'radio';
                     checkbox.name = 'selectedFile';
-                    checkbox.value = file;
 
                     cell2.appendChild(checkbox);
                 });
@@ -259,7 +263,6 @@
             });
     }
 
-    // Load files when the page loads
     window.onload = loadFiles;
 </script>
 </body>

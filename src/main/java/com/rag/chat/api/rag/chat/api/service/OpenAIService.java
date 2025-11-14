@@ -3,7 +3,10 @@ package com.rag.chat.api.rag.chat.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.chat.api.rag.chat.api.entity.UserFile;
 import com.rag.chat.api.rag.chat.api.model.ChatRequest;
+import com.rag.chat.api.rag.chat.api.repo.UserFileRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -22,28 +25,34 @@ public class OpenAIService {
     private String openaiThreadsUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    UserFileRepository userFileRepository;
 
-    public  String createThreadRun(String assistantId, String fileId, String userMessage) throws JsonProcessingException {
+    public  String createThreadRun(String assistantId, String fileId) throws JsonProcessingException {
 
         String requestBody = """
-                {
-                  "assistant_id": "%s",
-                  "thread": {
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "%s",
-                        "attachments": [
-                          {
-                            "file_id": "%s",
-                            "tools": [{ "type": "file_search" }]
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-                """.formatted(assistantId, userMessage, fileId);
+                 {
+                   "assistant_id": "%s",
+                   "thread": {
+                     "messages": [
+                       {
+                         "role": "user",
+                         "content": "You are a document-reader assistant. I will upload a PDF, and you must read and index its full content.\\nYour job:\\n1. Extract all text exactly as it appears in the PDF.\\n2. When I ask a question, return ONLY the exact text from the PDF that matches my question.\\n3. Do NOT paraphrase, rewrite, summarize, or infer anything.\\n4. If I ask for a bullet, section, paragraph, table, or clause, return it exactly as written in the PDF — same wording, same formatting, same spelling.\\n5. If the answer does not exist in the PDF, respond with: \\"Not found in the PDF.\\"\\n6. Never add extra commentary or interpretation. Only return the text from the document.",
+                         "attachments": [
+                           {
+                             "file_id": "%s",
+                             "tools": [
+                               {
+                                 "type": "file_search"
+                               }
+                             ]
+                           }
+                         ]
+                       }
+                     ]
+                   }
+                 } 
+                """.formatted(assistantId, fileId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(openaiApiKey);
@@ -60,14 +69,18 @@ public class OpenAIService {
 
         System.out.println("Thread is created :"+threadId);
 
-        //todo save information linked to user <> filename <> file_id <> thread_id in DB .
         return threadId;
     }
 
     public String sendThreadMessage(ChatRequest request) throws Exception {
+        UserFile userFile = userFileRepository
+                .findFirstByUserIdAndFileNameOrderByCreatedDateDesc(request.getUserId(), request.getFileName())
+                .orElse(null);
+
+        var threadId=createThreadRun("asst_K9ufIe4zr9rjxx1X9tWUp3i8",userFile.getFileId()).replace("\"","");
 
         //todo fetch the thread_id and assistant id related to file Name and send here
-        String url = openaiThreadsUrl+"v1/threads/" + "thread_TV7mNEdpCh78E5W5xff0ymra" + "/messages";
+        String url = openaiThreadsUrl+"v1/threads/" + threadId + "/messages";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(openaiApiKey);
@@ -81,9 +94,12 @@ public class OpenAIService {
         );
 
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+        //ask question
+        Thread.sleep(2000);
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
-        return runThread("thread_TV7mNEdpCh78E5W5xff0ymra","asst_K9ufIe4zr9rjxx1X9tWUp3i8");
+
+        return runThread(threadId,userFile.getAssistantId());
     }
 
     public String runThread(String threadId, String assistantId) throws Exception {
@@ -100,8 +116,9 @@ public class OpenAIService {
 
         HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        Thread.sleep(5000);
 
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
         System.out.println("Thread is running .");
 
         Thread.sleep(7000);
