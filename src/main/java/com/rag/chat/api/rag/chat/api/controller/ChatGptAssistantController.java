@@ -24,6 +24,8 @@ import java.util.Map;
 
 @RestController
 public class ChatGptAssistantController {
+    @Value("${openai.assistant_id}")
+    private String ASSISTANT_ID ;
     @Value("${openai.api.key}")
     private String openaiApiKey;
 
@@ -72,7 +74,7 @@ public class ChatGptAssistantController {
         var userFiles=new UserFile();
         userFiles.setUserId(userId.toString());
         userFiles.setFileName(file.getOriginalFilename());
-        userFiles.setAssistantId("asst_K9ufIe4zr9rjxx1X9tWUp3i8");
+        userFiles.setAssistantId(ASSISTANT_ID);
        // userFiles.setThreadId(treadId.replace("\"",""));
         userFiles.setFileId(fileId);
         userFiles.setCreatedDate(LocalDateTime.now());

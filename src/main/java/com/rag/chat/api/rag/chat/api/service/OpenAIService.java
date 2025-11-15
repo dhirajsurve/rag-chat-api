@@ -18,6 +18,8 @@ import java.util.Map;
 
 @Service
 public class OpenAIService {
+    @Value("${openai.assistant_id}")
+    private  String ASSISTANT_ID;
     @Value("${openai.api.key}")
     private String openaiApiKey;
 
@@ -77,7 +79,7 @@ public class OpenAIService {
                 .findFirstByUserIdAndFileNameOrderByCreatedDateDesc(request.getUserId(), request.getFileName())
                 .orElse(null);
 
-        var threadId=createThreadRun("asst_K9ufIe4zr9rjxx1X9tWUp3i8",userFile.getFileId()).replace("\"","");
+        var threadId=createThreadRun(ASSISTANT_ID,userFile.getFileId()).replace("\"","");
 
         //todo fetch the thread_id and assistant id related to file Name and send here
         String url = openaiThreadsUrl+"v1/threads/" + threadId + "/messages";
